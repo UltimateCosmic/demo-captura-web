@@ -8,6 +8,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCaptureStore, useCaptureStoreSync } from "@/lib/store"
 
+function applyKey(text: string, key: string) {
+  if (key === "Backspace") {
+    return text.slice(0, -1)
+  }
+
+  if (key === "Enter") {
+    return `${text}\n`
+  }
+
+  if (key === "Tab") {
+    return `${text}\t`
+  }
+
+  if (key === " ") {
+    return `${text} `
+  }
+
+  if (key.length === 1) {
+    return `${text}${key}`
+  }
+
+  return text
+}
+
+function getKeyFromDescription(description: string) {
+  return description.replace(/^keydown:\s*/, "")
+}
+
 export function EventLogPanel() {
   useCaptureStoreSync()
 
@@ -17,6 +45,10 @@ export function EventLogPanel() {
     .filter((event) => event.type === "keydown")
     .slice()
     .reverse()
+  const typedText = keyEvents.reduce(
+    (text, event) => applyKey(text, getKeyFromDescription(event.description)),
+    ""
+  )
 
   return (
     <Card className="min-h-0">
@@ -47,9 +79,9 @@ export function EventLogPanel() {
           </div>
         ) : (
           <ScrollArea className="h-32 rounded-lg border bg-background p-3">
-            <p className="break-words font-mono text-sm leading-7 text-muted-foreground">
-              {keyEvents.map((event) => event.description).join("  ")}
-            </p>
+            <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7 text-muted-foreground">
+              {typedText || "Sin texto visible"}
+            </pre>
           </ScrollArea>
         )}
       </CardContent>
