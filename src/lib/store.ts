@@ -20,6 +20,7 @@ type CaptureStore = DemoSnapshot & {
 const storageName = "demo-captura-web"
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let lastRemotePayload = ""
+let hasPendingRemoteSave = false
 
 function createId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -45,6 +46,7 @@ async function saveRemoteNow() {
   const payload = JSON.stringify(snapshot)
 
   if (payload === lastRemotePayload) {
+    hasPendingRemoteSave = false
     return
   }
 
@@ -56,8 +58,10 @@ async function saveRemoteNow() {
       headers: { "content-type": "application/json" },
       body: payload,
     })
+    hasPendingRemoteSave = false
   } catch {
     lastRemotePayload = ""
+    hasPendingRemoteSave = false
   }
 }
 
@@ -70,12 +74,18 @@ function scheduleRemoteSave() {
     clearTimeout(saveTimer)
   }
 
+  hasPendingRemoteSave = true
   saveTimer = setTimeout(() => {
+    saveTimer = null
     void saveRemoteNow()
-  }, 250)
+  }, 80)
 }
 
 async function loadRemoteSnapshot() {
+  if (saveTimer || hasPendingRemoteSave) {
+    return
+  }
+
   try {
     const response = await fetch("/api/demo-state", { cache: "no-store" })
 
@@ -185,7 +195,7 @@ export function useCaptureStoreSync() {
 
     const interval = window.setInterval(() => {
       void loadRemoteSnapshot()
-    }, 2000)
+    }, 500)
 
     window.addEventListener("storage", handleStorage)
     return () => {
