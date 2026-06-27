@@ -22,15 +22,39 @@ function isFileDrag(event: DragEvent<HTMLElement> | globalThis.DragEvent) {
 }
 
 function isPasswordTarget(target: EventTarget | null) {
-  return target instanceof HTMLInputElement && target.type === "password"
+  const element = getElementLike(target)
+
+  return (
+    element?.tagName === "INPUT" &&
+    element.getAttribute("type")?.toLowerCase() === "password"
+  )
 }
 
 function isTextEntryTarget(target: EventTarget | null) {
+  const element = getElementLike(target)
+
+  if (!element) {
+    return false
+  }
+
+  const tagName = element.tagName
+
   return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLElement && target.isContentEditable
+    tagName === "INPUT" ||
+    tagName === "TEXTAREA" ||
+    element.getAttribute("contenteditable") !== null
   )
+}
+
+function getElementLike(target: EventTarget | null) {
+  if (!target || !("tagName" in target) || !("getAttribute" in target)) {
+    return null
+  }
+
+  return target as {
+    tagName: string
+    getAttribute: (name: string) => string | null
+  }
 }
 
 export function MicrofrontDropSurface({

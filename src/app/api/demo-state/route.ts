@@ -15,6 +15,7 @@ const stateId = process.env.DEMO_STATE_ID || "default"
 const supabaseUrl = process.env.SUPABASE_URL
 const supabaseKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+const supabaseTimeoutMs = 3500
 
 type MemoryStore = {
   snapshot: DemoSnapshot
@@ -40,6 +41,29 @@ function getSupabaseEndpoint() {
   return `${supabaseUrl.replace(/\/$/, "")}/rest/v1/demo_state`
 }
 
+async function fetchWithTimeout(
+  input: string,
+  init: RequestInit,
+  label: string
+) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), supabaseTimeoutMs)
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    })
+  } catch (error) {
+    console.error(`[demo-state] ${label} failed`, {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 async function readFromSupabase() {
   const endpoint = getSupabaseEndpoint()
 
@@ -47,7 +71,7 @@ async function readFromSupabase() {
     return null
   }
 
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${endpoint}?id=eq.${encodeURIComponent(stateId)}&select=data`,
     {
       headers: {
@@ -55,10 +79,17 @@ async function readFromSupabase() {
         authorization: `Bearer ${supabaseKey}`,
       },
       cache: "no-store",
-    }
+    },
+    "read"
   )
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
+    if (response) {
+      console.error("[demo-state] read returned non-ok", {
+        status: response.status,
+      })
+    }
+
     return null
   }
 
@@ -74,22 +105,36 @@ async function writeToSupabase(snapshot: DemoSnapshot) {
     return false
   }
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      apikey: supabaseKey,
-      authorization: `Bearer ${supabaseKey}`,
-      "content-type": "application/json",
-      prefer: "resolution=merge-duplicates",
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: {
+        apikey: supabaseKey,
+        authorization: `Bearer ${supabaseKey}`,
+        "content-type": "application/json",
+        prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify({
+        id: stateId,
+        data: snapshot,
+        updated_at: new Date().toISOString(),
+      }),
     },
-    body: JSON.stringify({
-      id: stateId,
-      data: snapshot,
-      updated_at: new Date().toISOString(),
-    }),
-  })
+    "write"
+  )
 
-  return response.ok
+  if (!response?.ok) {
+    if (response) {
+      console.error("[demo-state] write returned non-ok", {
+        status: response.status,
+      })
+    }
+
+    return false
+  }
+
+  return true
 }
 
 export async function GET() {
