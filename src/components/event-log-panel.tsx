@@ -9,6 +9,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCaptureStore, useCaptureStoreSync } from "@/lib/store"
 
 function applyKey(text: string, key: string) {
+  if (key === "\\b") {
+    return text.slice(0, -1)
+  }
+
   if (key === "Backspace") {
     return text.slice(0, -1)
   }
@@ -33,6 +37,10 @@ function applyKey(text: string, key: string) {
 }
 
 function getKeyFromDescription(description: string) {
+  if (description.startsWith("input: ")) {
+    return description.slice(7)
+  }
+
   return description.replace(/^keydown:\s*/, "")
 }
 

@@ -87,7 +87,10 @@ async function loadRemoteSnapshot() {
   }
 
   try {
-    const response = await fetch("/api/demo-state", { cache: "no-store" })
+    const response = await fetch(`/api/demo-state?t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "cache-control": "no-cache" },
+    })
 
     if (!response.ok) {
       return

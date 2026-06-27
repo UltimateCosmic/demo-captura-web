@@ -21,6 +21,18 @@ function isFileDrag(event: DragEvent<HTMLElement> | globalThis.DragEvent) {
   return Array.from(event.dataTransfer?.types ?? []).includes("Files")
 }
 
+function isPasswordTarget(target: EventTarget | null) {
+  return target instanceof HTMLInputElement && target.type === "password"
+}
+
+function isTextEntryTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLElement && target.isContentEditable
+  )
+}
+
 export function MicrofrontDropSurface({
   className,
   mode = "admin",
@@ -59,6 +71,16 @@ export function MicrofrontDropSurface({
     [addEvent]
   )
 
+  const recordInput = useCallback(
+    (value: string) => {
+      addEvent({
+        type: "keydown",
+        description: `input: ${value}`,
+      })
+    },
+    [addEvent]
+  )
+
   const attachIframeListeners = useCallback(() => {
     iframeCleanupRef.current?.()
     iframeCleanupRef.current = null
@@ -74,10 +96,36 @@ export function MicrofrontDropSurface({
       frameDocument.body.focus()
     }
 
+    const handleFrameBeforeInput = (event: InputEvent) => {
+      if (isPasswordTarget(event.target)) {
+        return
+      }
+
+      if (event.inputType === "deleteContentBackward") {
+        recordInput("\\b")
+        return
+      }
+
+      if (event.inputType === "insertLineBreak") {
+        recordInput("\n")
+        return
+      }
+
+      if (event.data) {
+        recordInput(event.data)
+      }
+    }
+
     const handleFrameKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (isPasswordTarget(event.target)) {
+        return
+      }
+
       if (
-        event.target instanceof HTMLInputElement &&
-        event.target.type === "password"
+        isTextEntryTarget(event.target) &&
+        (event.key.length === 1 ||
+          event.key === "Backspace" ||
+          event.key === "Enter")
       ) {
         return
       }
@@ -97,17 +145,19 @@ export function MicrofrontDropSurface({
     }
 
     frameDocument.addEventListener("click", handleFrameClick)
+    frameDocument.addEventListener("beforeinput", handleFrameBeforeInput)
     frameDocument.addEventListener("keydown", handleFrameKeyDown)
     frameDocument.addEventListener("dragover", handleFrameDragOver)
     frameDocument.addEventListener("drop", handleFrameDrop)
 
     iframeCleanupRef.current = () => {
       frameDocument.removeEventListener("click", handleFrameClick)
+      frameDocument.removeEventListener("beforeinput", handleFrameBeforeInput)
       frameDocument.removeEventListener("keydown", handleFrameKeyDown)
       frameDocument.removeEventListener("dragover", handleFrameDragOver)
       frameDocument.removeEventListener("drop", handleFrameDrop)
     }
-  }, [recordFiles, recordKey])
+  }, [recordFiles, recordInput, recordKey])
 
   useEffect(() => {
     if (!currentUrl || currentHtml) {
