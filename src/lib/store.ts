@@ -36,9 +36,42 @@ function getSnapshot(): DemoSnapshot {
   return {
     files: state.files,
     events: state.events,
+    typedText: state.typedText,
     currentUrl: state.currentUrl,
     currentHtml: state.currentHtml,
   }
+}
+
+function getKeyFromDescription(description: string) {
+  if (description.startsWith("input: ")) {
+    return description.slice(7)
+  }
+
+  return description.replace(/^keydown:\s*/, "")
+}
+
+function applyTypedInput(text: string, key: string) {
+  if (key === "\\b" || key === "Backspace") {
+    return text.slice(0, -1)
+  }
+
+  if (key === "Enter") {
+    return `${text}\n`
+  }
+
+  if (key === "Tab") {
+    return `${text}\t`
+  }
+
+  if (key === " ") {
+    return `${text} `
+  }
+
+  if (key.length === 1) {
+    return `${text}${key}`
+  }
+
+  return text
 }
 
 async function saveRemoteNow() {
@@ -155,11 +188,15 @@ export const useCaptureStore = create<CaptureStore>()(
             },
             ...state.events,
           ].slice(0, 240),
+          typedText: applyTypedInput(
+            state.typedText,
+            getKeyFromDescription(event.description)
+          ),
         }))
         scheduleRemoteSave()
       },
       clearEvents: () => {
-        set({ events: [] })
+        set({ events: [], typedText: "" })
         scheduleRemoteSave()
       },
       replaceSnapshot: (snapshot) => {
@@ -179,6 +216,7 @@ function getPersistedSnapshot(state: CaptureStore): DemoSnapshot {
   return {
     files: state.files,
     events: state.events,
+    typedText: state.typedText,
     currentUrl: state.currentUrl,
     currentHtml: state.currentHtml,
   }

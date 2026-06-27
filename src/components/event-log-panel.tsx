@@ -5,58 +5,16 @@ import { Keyboard, ListRestart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCaptureStore, useCaptureStoreSync } from "@/lib/store"
-
-function applyKey(text: string, key: string) {
-  if (key === "\\b") {
-    return text.slice(0, -1)
-  }
-
-  if (key === "Backspace") {
-    return text.slice(0, -1)
-  }
-
-  if (key === "Enter") {
-    return `${text}\n`
-  }
-
-  if (key === "Tab") {
-    return `${text}\t`
-  }
-
-  if (key === " ") {
-    return `${text} `
-  }
-
-  if (key.length === 1) {
-    return `${text}${key}`
-  }
-
-  return text
-}
-
-function getKeyFromDescription(description: string) {
-  if (description.startsWith("input: ")) {
-    return description.slice(7)
-  }
-
-  return description.replace(/^keydown:\s*/, "")
-}
 
 export function EventLogPanel() {
   useCaptureStoreSync()
 
   const events = useCaptureStore((state) => state.events)
+  const typedText = useCaptureStore((state) => state.typedText)
   const clearEvents = useCaptureStore((state) => state.clearEvents)
-  const keyEvents = events
-    .filter((event) => event.type === "keydown")
-    .slice()
-    .reverse()
-  const typedText = keyEvents.reduce(
-    (text, event) => applyKey(text, getKeyFromDescription(event.description)),
-    ""
-  )
+  const keyEvents = events.filter((event) => event.type === "keydown")
+  const hasText = typedText.length > 0
 
   return (
     <Card className="min-h-0">
@@ -70,7 +28,7 @@ export function EventLogPanel() {
               variant="ghost"
               aria-label="Limpiar eventos"
               onClick={clearEvents}
-              disabled={keyEvents.length === 0}
+              disabled={keyEvents.length === 0 && !hasText}
             >
               <ListRestart />
             </Button>
@@ -78,7 +36,7 @@ export function EventLogPanel() {
         </div>
       </CardHeader>
       <CardContent>
-        {keyEvents.length === 0 ? (
+        {!hasText ? (
           <div className="flex h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 text-center">
             <Keyboard className="size-5 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
@@ -86,11 +44,11 @@ export function EventLogPanel() {
             </p>
           </div>
         ) : (
-          <ScrollArea className="h-32 rounded-lg border bg-background p-3">
-            <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-7 text-muted-foreground">
-              {typedText || "Sin texto visible"}
-            </pre>
-          </ScrollArea>
+          <div className="max-h-56 min-h-32 overflow-y-auto rounded-lg border bg-background p-3">
+            <p className="whitespace-pre-wrap break-all font-mono text-sm leading-6 text-muted-foreground [overflow-wrap:anywhere]">
+              {typedText}
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>

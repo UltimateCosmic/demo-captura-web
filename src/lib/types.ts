@@ -16,6 +16,7 @@ export type InteractionEvent = {
 export type DemoSnapshot = {
   files: UploadedFile[]
   events: InteractionEvent[]
+  typedText: string
   currentUrl: string
   currentHtml: string
 }
