@@ -1,8 +1,8 @@
 "use client"
 
-import { FormEvent, useState } from "react"
+import { ChangeEvent, FormEvent, useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Play } from "lucide-react"
+import { ArrowLeft, FileUp, Play } from "lucide-react"
 
 import { EventLogPanel } from "@/components/event-log-panel"
 import { PagePreview } from "@/components/page-preview"
@@ -37,7 +37,8 @@ export default function AdminPage() {
 
   const currentUrl = useCaptureStore((state) => state.currentUrl)
   const setCurrentUrl = useCaptureStore((state) => state.setCurrentUrl)
-  const addEvent = useCaptureStore((state) => state.addEvent)
+  const setCurrentHtml = useCaptureStore((state) => state.setCurrentHtml)
+  const htmlInputRef = useRef<HTMLInputElement>(null)
   const [url, setUrl] = useState<string | null>(null)
   const visibleUrl = url ?? currentUrl
 
@@ -45,12 +46,21 @@ export default function AdminPage() {
     event.preventDefault()
     const nextUrl = normalizeUrl(visibleUrl)
     setCurrentUrl(nextUrl)
-    addEvent({
-      type: "info",
-      description: nextUrl
-        ? `Preview cargado: ${nextUrl}`
-        : "Preview local sin URL",
-    })
+  }
+
+  const loadHtmlFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      return
+    }
+
+    const html = await file.text()
+    const label = `HTML local: ${file.name}`
+
+    setUrl(label)
+    setCurrentHtml(html, label)
+    event.target.value = ""
   }
 
   return (
@@ -81,6 +91,21 @@ export default function AdminPage() {
                 <Button type="submit">
                   <Play />
                   Cargar preview
+                </Button>
+                <input
+                  ref={htmlInputRef}
+                  type="file"
+                  accept=".html,.htm,text/html"
+                  className="hidden"
+                  onChange={loadHtmlFile}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => htmlInputRef.current?.click()}
+                >
+                  <FileUp />
+                  Subir HTML
                 </Button>
               </div>
             </form>

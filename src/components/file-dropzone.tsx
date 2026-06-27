@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils"
 
 export function FileDropzone() {
   const addFiles = useCaptureStore((state) => state.addFiles)
-  const addEvent = useCaptureStore((state) => state.addEvent)
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (acceptedFiles) => {
@@ -18,10 +17,6 @@ export function FileDropzone() {
       }
 
       addFiles(acceptedFiles)
-      addEvent({
-        type: "drop",
-        description: `Se recibieron ${acceptedFiles.length} archivo(s)`,
-      })
     },
   })
 

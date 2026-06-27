@@ -8,14 +8,14 @@ export type UploadedFile = {
 
 export type InteractionEvent = {
   id: string
-  type:
-    | "click"
-    | "double-click"
-    | "keydown"
-    | "drag-enter"
-    | "drag-leave"
-    | "drop"
-    | "info"
+  type: "keydown"
   description: string
   timestamp: string
+}
+
+export type DemoSnapshot = {
+  files: UploadedFile[]
+  events: InteractionEvent[]
+  currentUrl: string
+  currentHtml: string
 }
