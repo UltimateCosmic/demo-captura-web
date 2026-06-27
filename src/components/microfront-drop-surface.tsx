@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Globe2, Loader2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { useCaptureStore, useCaptureStoreSync } from "@/lib/store"
+import { useCaptureStore } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 type MicrofrontDropSurfaceProps = {
@@ -61,8 +61,6 @@ export function MicrofrontDropSurface({
   className,
   mode = "admin",
 }: MicrofrontDropSurfaceProps) {
-  useCaptureStoreSync()
-
   const currentUrl = useCaptureStore((state) => state.currentUrl)
   const currentHtml = useCaptureStore((state) => state.currentHtml)
   const addFiles = useCaptureStore((state) => state.addFiles)

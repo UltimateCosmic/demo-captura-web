@@ -12,15 +12,13 @@ import {
 } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatBytes, formatDate } from "@/lib/format"
-import { useCaptureStore, useCaptureStoreSync } from "@/lib/store"
+import { useCaptureStore } from "@/lib/store"
 
 type UploadedFilesPanelProps = {
   readonly?: boolean
 }
 
 export function UploadedFilesPanel({ readonly = false }: UploadedFilesPanelProps) {
-  useCaptureStoreSync()
-
   const files = useCaptureStore((state) => state.files)
   const removeFile = useCaptureStore((state) => state.removeFile)
 

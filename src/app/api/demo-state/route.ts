@@ -137,6 +137,10 @@ async function writeToSupabase(snapshot: DemoSnapshot) {
   return true
 }
 
+async function readCurrentSnapshot() {
+  return (await readFromSupabase()) ?? getMemoryStore().snapshot
+}
+
 export async function GET() {
   const remoteSnapshot = await readFromSupabase()
 
@@ -152,7 +156,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const snapshot = normalizeSnapshot(await request.json())
+  const incoming = (await request.json()) as Partial<DemoSnapshot>
+  const current = await readCurrentSnapshot()
+  const snapshot = normalizeSnapshot({
+    ...current,
+    ...incoming,
+  })
   const saved = await writeToSupabase(snapshot)
 
   if (!saved) {

@@ -21,6 +21,7 @@ const storageName = "demo-captura-web"
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let lastRemotePayload = ""
 let hasPendingRemoteSave = false
+let pendingRemotePatch: Partial<DemoSnapshot> = {}
 
 function createId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -40,6 +41,24 @@ function getSnapshot(): DemoSnapshot {
     currentUrl: state.currentUrl,
     currentHtml: state.currentHtml,
   }
+}
+
+function getSnapshotPatch(patch: Partial<DemoSnapshot>): Partial<DemoSnapshot> {
+  const state = useCaptureStore.getState()
+  const snapshot = {
+    files: state.files,
+    events: state.events,
+    typedText: state.typedText,
+    currentUrl: state.currentUrl,
+    currentHtml: state.currentHtml,
+  }
+
+  return Object.fromEntries(
+    Object.keys(patch).map((key) => [
+      key,
+      snapshot[key as keyof DemoSnapshot],
+    ])
+  ) as Partial<DemoSnapshot>
 }
 
 function getKeyFromDescription(description: string) {
@@ -75,10 +94,12 @@ function applyTypedInput(text: string, key: string) {
 }
 
 async function saveRemoteNow() {
-  const snapshot = getSnapshot()
-  const payload = JSON.stringify(snapshot)
+  const patch = getSnapshotPatch(pendingRemotePatch)
+  const payload = JSON.stringify(patch)
 
-  if (payload === lastRemotePayload) {
+  pendingRemotePatch = {}
+
+  if (payload === "{}" || payload === lastRemotePayload) {
     hasPendingRemoteSave = false
     return
   }
@@ -98,9 +119,14 @@ async function saveRemoteNow() {
   }
 }
 
-function scheduleRemoteSave() {
+function scheduleRemotePatch(patch: Partial<DemoSnapshot>) {
   if (typeof window === "undefined") {
     return
+  }
+
+  pendingRemotePatch = {
+    ...pendingRemotePatch,
+    ...patch,
   }
 
   if (saveTimer) {
@@ -111,7 +137,7 @@ function scheduleRemoteSave() {
   saveTimer = setTimeout(() => {
     saveTimer = null
     void saveRemoteNow()
-  }, 80)
+  }, 250)
 }
 
 async function loadRemoteSnapshot() {
@@ -147,11 +173,11 @@ export const useCaptureStore = create<CaptureStore>()(
       ...emptyDemoSnapshot,
       setCurrentUrl: (url) => {
         set({ currentUrl: url, currentHtml: "" })
-        scheduleRemoteSave()
+        scheduleRemotePatch({ currentUrl: url, currentHtml: "" })
       },
       setCurrentHtml: (html, label) => {
         set({ currentHtml: html, currentUrl: label })
-        scheduleRemoteSave()
+        scheduleRemotePatch({ currentHtml: html, currentUrl: label })
       },
       addFiles: (files) => {
         set((state) => ({
@@ -166,13 +192,13 @@ export const useCaptureStore = create<CaptureStore>()(
             ...state.files,
           ],
         }))
-        scheduleRemoteSave()
+        scheduleRemotePatch({ files: [] })
       },
       removeFile: (id) => {
         set((state) => ({
           files: state.files.filter((file) => file.id !== id),
         }))
-        scheduleRemoteSave()
+        scheduleRemotePatch({ files: [] })
       },
       addEvent: (event) => {
         if (event.type !== "keydown") {
@@ -193,11 +219,11 @@ export const useCaptureStore = create<CaptureStore>()(
             getKeyFromDescription(event.description)
           ),
         }))
-        scheduleRemoteSave()
+        scheduleRemotePatch({ events: [], typedText: "" })
       },
       clearEvents: () => {
         set({ events: [], typedText: "" })
-        scheduleRemoteSave()
+        scheduleRemotePatch({ events: [], typedText: "" })
       },
       replaceSnapshot: (snapshot) => {
         set(normalizeSnapshot(snapshot))

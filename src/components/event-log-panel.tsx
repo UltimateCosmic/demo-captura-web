@@ -5,11 +5,9 @@ import { Keyboard, ListRestart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useCaptureStore, useCaptureStoreSync } from "@/lib/store"
+import { useCaptureStore } from "@/lib/store"
 
 export function EventLogPanel() {
-  useCaptureStoreSync()
-
   const events = useCaptureStore((state) => state.events)
   const typedText = useCaptureStore((state) => state.typedText)
   const clearEvents = useCaptureStore((state) => state.clearEvents)
